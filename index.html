@@ -147,7 +147,11 @@ button.broke{background:var(--lane-hi);color:var(--dim);box-shadow:0 4px 0 #0B0D
 .howpts{margin:0;color:var(--dim);font-size:.85rem;font-weight:700}
 .pts{color:var(--yellow)}
 .tag.diff.d-easy{color:var(--green)} .tag.diff.d-medium{color:var(--blue)} .tag.diff.d-hard{color:var(--red)}
-.whochip{display:inline-flex;align-items:center;gap:8px;font-weight:900;color:var(--paint)}
+.whochip{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:900;color:var(--paint)}
+.unlockbox{flex-basis:100%;display:flex;flex-direction:column;gap:6px;background:var(--lane);border:2px solid var(--line);border-radius:14px;padding:10px 12px;font-weight:800}
+.unlockbox input{flex:1 1 140px;min-width:0;font:700 1rem var(--body);color:var(--paint);background:var(--asphalt);border:2px solid var(--line);border-radius:10px;padding:7px 10px}
+.login-form label.always{display:flex;align-items:center;gap:10px;font:800 .95rem var(--body);letter-spacing:0;text-transform:none;color:var(--paint);cursor:pointer;padding-block:4px}
+.login-form label.always input{width:22px;height:22px;flex:none;accent-color:var(--orange)}
 li.empty{border:2px dashed var(--line);border-radius:16px;padding:18px;color:var(--dim);font-weight:800;text-align:center}
 .login{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:16px;background:var(--asphalt);overflow-y:auto;
   background-image:repeating-linear-gradient(90deg,transparent 0 calc(50% - 2px),rgba(255,255,255,.05) calc(50% - 2px) calc(50% + 2px),transparent calc(50% + 2px) 100%)}
@@ -189,7 +193,15 @@ li.empty{border:2px dashed var(--line);border-radius:16px;padding:18px;color:var
   <nav class="topnav">
     <button class="navbtn on" id="navRace">Race</button>
     <button class="navbtn" id="navShop">Shop</button>
-    <span class="whochip"><b id="who"></b> <button class="small ghost" id="logoutBtn">Log out</button></span>
+    <span class="whochip"><b id="who"></b><span id="lockMark" hidden title="Always this account on this device">🔒</span>
+      <button class="small ghost" id="logoutBtn">Log out</button>
+      <button class="small ghost" id="lockBtn">Always me here</button>
+      <button class="small ghost" id="unlockBtn" hidden>Unlock</button></span>
+    <form id="unlockBox" class="unlockbox" hidden>
+      <label for="unlockCode">Type your secret code to stop always using this account here:</label>
+      <div class="row"><input type="password" id="unlockCode" maxlength="30" placeholder="Secret code"><button class="small">Unlock</button><button type="button" class="small ghost" id="unlockCancel">Cancel</button></div>
+      <p class="status" id="unlockMsg" role="status"></p>
+    </form>
     <div class="scorebox" id="scoreBox" aria-live="polite">
       <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#FFD23F" stroke="#C28A0E" stroke-width="2"/><circle cx="12" cy="12" r="6" fill="none" stroke="#C28A0E" stroke-width="1.5"/><path d="M12 8.5v7" stroke="#C28A0E" stroke-width="2" stroke-linecap="round"/></svg>
       <b id="score">0</b><span>coins</span>
@@ -260,6 +272,7 @@ li.empty{border:2px dashed var(--line);border-radius:16px;padding:18px;color:var
       <input type="text" id="loginUser" maxlength="20" autocapitalize="off" spellcheck="false" placeholder="like racer_andreas">
       <label for="loginCode">Secret code</label>
       <input type="password" id="loginCode" maxlength="30" placeholder="at least 4 letters or numbers">
+      <label class="always"><input type="checkbox" id="loginAlways"> Always use this account on this device</label>
       <div class="row">
         <button type="submit">Log in</button>
         <button type="button" class="ghost" id="newAcct">Make new account</button>
@@ -931,9 +944,30 @@ function applyData(d){
   applyTrack(); showView("race"); render();
 }
 
+// "always this account on this device": skip the login screen, and switching needs the secret code
+const lockedTo = () => { try{ return localStorage.getItem("choreRacer.always"); }catch(e){ return null; } };
+function setLock(u){ try{ u ? localStorage.setItem("choreRacer.always", u) : localStorage.removeItem("choreRacer.always"); }catch(e){} showLock(); }
+function showLock(){
+  const locked = !!who && lockedTo() === who;
+  $("#lockMark").hidden = !locked; $("#unlockBtn").hidden = !locked;
+  $("#logoutBtn").hidden = locked; $("#lockBtn").hidden = locked || !who;
+  if (!locked) $("#unlockBox").hidden = true;
+}
+$("#lockBtn").onclick = () => { setLock(who); say(`This device now always opens as ${me?.name}.`); };
+$("#unlockBtn").onclick = () => { $("#unlockBox").hidden = false; $("#unlockMsg").textContent = ""; $("#unlockCode").focus(); };
+$("#unlockCancel").onclick = () => { $("#unlockBox").hidden = true; $("#unlockCode").value = ""; };
+$("#unlockBox").onsubmit = async e => {
+  e.preventDefault();
+  const code = $("#unlockCode").value;
+  if (!me || await hashCode(me.salt, code) !== me.hash){ $("#unlockMsg").textContent = "That code is wrong."; return; }
+  $("#unlockCode").value = ""; setLock(null); say("Unlocked. You can log out now.");
+};
+
 async function enter(u, acc){
   who = u; me = acc;
   try{ localStorage.setItem("choreRacer.who", u); }catch(e){}
+  if ($("#loginAlways").checked){ setLock(u); $("#loginAlways").checked = false; }
+  setTimeout(showLock);
   let d = null; try{ d = JSON.parse(acc.data || "null"); }catch(e){}
   applyData(d);
   $("#login").hidden = true;
@@ -968,7 +1002,8 @@ $("#newAcct").onclick = async () => {
   else say(`Welcome ${acc.name}! Snap or type your chore list to start.`);
 };
 $("#logoutBtn").onclick = () => {
-  Accounts.flush(); who = null; me = null;
+  if (lockedTo() === who) return;
+  Accounts.flush(); who = null; me = null; showLock();
   try{ localStorage.removeItem("choreRacer.who"); }catch(e){}
   $("#loginUser").value = ""; loginMsg(""); $("#login").hidden = false; $("#loginUser").focus();
 };
@@ -990,7 +1025,7 @@ render();
     $("#typeHint").hidden = false;
   } else if (!photoOK){ $("label[for=listFile]").hidden = true; $("#typeBox").hidden = false; }
   // stay logged in on this device
-  let last = null; try{ last = localStorage.getItem("choreRacer.who"); }catch(e){}
+  let last = null; try{ last = lockedTo() || localStorage.getItem("choreRacer.who"); }catch(e){}
   if (last){ const acc = await Accounts.get(last); if (acc) return enter(last, acc); }
   $("#loginUser").focus();
 })();
