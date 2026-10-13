@@ -880,7 +880,7 @@ function smartParse(text){
   for (let raw of String(text).split(/\n/).slice(0, 80)){
     let line = raw.replace(/[|_~^`"“”]+/g, " ").replace(/\s+/g, " ").trim();
     // bullets, check boxes, numbers in front
-    for (let i = 0; i < 3; i++) line = line.replace(/^(?:[-–—*•·▪►>+]|\[\s*[xX✓✔]?\s*\]|\(\s*[xX]?\s*\)|[□☐☑✓✔]|[oO0](?=\s)|\d{1,2}[.):])\s*/, "");
+    for (let i = 0; i < 3; i++) line = line.replace(/^(?:[-–—*•·▪►>+]|\[\s*[xX✓✔1lI|]?\s*\]?|\(\s*[xX]?\s*\)|[□☐☑✓✔]|[oO0](?=\s)|\d{1,2}[.):])\s*/, "");
     line = line.replace(/\s*[-–:,.;]+\s*$/, m => m.includes(":") ? ":" : "").trim();
     if (!/[a-zæøåäöü]{2,}/i.test(line)) continue;                 // junk from the photo
     const letters = (line.match(/[a-zæøåäöü]/gi) || []).length;
@@ -894,6 +894,7 @@ function smartParse(text){
     const shortLine = words.length <= 3;
     const allArea = words.length && words.every(w => AREA_WORDS.includes(w));
     const caps = /[A-ZÆØÅ]{3,}/.test(line) && line === line.toUpperCase();
+    if (OTHER_WORDS.test(line) && !known && !hasVerb){ other.push(line.replace(/:$/, "")); continue; }   // titles, prizes
     if (/:$/.test(line) && !known && words.length <= 4 || shortLine && allArea && !hasVerb || caps && shortLine && !hasVerb && !known){
       area = line.replace(/:$/, "").trim().toLowerCase().replace(/^./, c => c.toUpperCase()).slice(0, 30);
       continue;
