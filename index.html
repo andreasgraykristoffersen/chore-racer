@@ -236,7 +236,7 @@ li.empty{border:2px dashed var(--line);border-radius:16px;padding:18px;color:var
       <label class="btn" for="listFile">Take or pick a photo<input type="file" id="listFile" accept="image/*" capture="environment"></label>
       <button class="ghost" id="typeBtn">Type it instead</button>
     </div>
-    <p class="howpts" id="typeHint" hidden>One chore on each line. Add minutes and how hard it is, like: <b>empty dishwasher 10 hard</b>. Write a room with a colon, like <b>Kitchen:</b>, to make a tab.</p>
+    <p class="howpts" id="typeHint" hidden>Snap your list or type it, one chore on each line. I work out the rooms, minutes and how hard each chore is. You can also write them yourself, like <b>empty dishwasher 10 hard</b>.</p>
     <div id="typeBox" hidden>
       <textarea id="typed" placeholder="One chore on each line, like:&#10;make bed&#10;feed the cat&#10;empty dishwasher"></textarea>
       <div class="row" style="margin-top:10px"><button id="typedGo">Sort my chores</button></div>
@@ -798,19 +798,124 @@ Any text that is NOT a chore and NOT an area heading (a title, a date, a reward,
 Also give each chore "difficulty": "easy", "medium" or "hard" - how hard, tiring or yucky it is for a kid (feeding a pet = easy, emptying the dishwasher = medium, cleaning the bathroom or raking the whole garden = hard). This is about effort, not time.
 Reply with only JSON like: {"chores":[{"name":"Empty the dishwasher","minutes":10,"difficulty":"medium","note":"before dinner","area":"Kitchen","ask":"Show me a pic of your dishwasher open"},{"name":"Feed the cat","minutes":2,"difficulty":"easy","note":null,"area":null,"ask":null}],"otherText":["Saturday chores","Prize: pizza night!"]}`;
 
-// "Kitchen:" starts an area; "empty dishwasher 10 hard" = 10 minutes, hard. No number = 5 min, no word = medium.
-function parseTyped(text){
-  let area = null; const out = [];
-  for (let line of text.split(/\n/).slice(0,60)){
-    line = line.replace(/^\s*([-*•]|\d+[.)])\s*/, "").trim();
-    if (!line) continue;
-    if (/:\s*$/.test(line)){ area = line.replace(/:\s*$/,"").trim().slice(0,30); continue; }
-    const m = line.match(/(\d+)\s*(min(ute)?s?|m)?\b/i);
-    const d = (line.match(/\b(easy|medium|hard)\b/i)||[])[1];
-    const name = line.replace(/(\d+)\s*(min(ute)?s?|m)?\b/i,"").replace(/\b(easy|medium|hard)\b/i,"").replace(/[()\-–,]+\s*$/,"").replace(/\s+/g," ").trim();
-    if (name) out.push({name, minutes: m ? Number(m[1]) : 5, difficulty: d || "medium", area});
+// ---- chore detective: works out a chore list from messy text (a photo read on this device, or typing) ----
+// It finds room/day headings, skips titles and junk, fixes small reading mistakes,
+// and guesses minutes + how hard each chore is from chores it knows (English + Norwegian).
+const KNOWN = [
+  // [words that must all be there, minutes, difficulty]
+  ["dishwasher",10,"medium"],["oppvaskmaskin",10,"medium"],["oppvaskmaskinen",10,"medium"],
+  ["wash dishes",15,"medium"],["dishes",15,"medium"],["vaske opp",15,"medium"],["oppvask",15,"medium"],
+  ["make bed",3,"easy"],["bed",3,"easy"],["sengen",3,"easy"],["senga",3,"easy"],
+  ["clean room",25,"hard"],["tidy room",20,"medium"],["room",20,"medium"],["rommet",20,"medium"],
+  ["vacuum",15,"medium"],["hoover",15,"medium"],["støvsuge",15,"medium"],["støvsug",15,"medium"],
+  ["litter",5,"hard"],["kattedo",5,"hard"],["kattesand",5,"hard"],
+  ["feed",2,"easy"],["mate",2,"easy"],["gi mat",2,"easy"],
+  ["laundry",15,"medium"],["klesvask",15,"medium"],["vaske klær",15,"medium"],
+  ["fold",10,"medium"],["brette",10,"medium"],
+  ["trash",3,"easy"],["garbage",3,"easy"],["rubbish",3,"easy"],["bin",3,"easy"],["søppel",3,"easy"],["søpla",3,"easy"],["søppelet",3,"easy"],["bosset",3,"easy"],
+  ["recycling",5,"easy"],["pant",5,"easy"],["kildesortere",5,"easy"],
+  ["set table",3,"easy"],["dekke",3,"easy"],["clear table",5,"easy"],["rydde av",5,"easy"],["wipe",3,"easy"],["tørke av",3,"easy"],
+  ["dust",10,"medium"],["støv",10,"medium"],
+  ["water",3,"easy"],["plants",3,"easy"],["vanne",3,"easy"],["blomster",3,"easy"],
+  ["walk dog",20,"medium"],["dog",15,"medium"],["hunden",15,"medium"],["lufte",20,"medium"],
+  ["bathroom",20,"hard"],["toilet",10,"hard"],["badet",20,"hard"],["toalettet",10,"hard"],["vasken",10,"medium"],
+  ["mop",20,"hard"],["floor",20,"hard"],["gulv",20,"hard"],["gulvet",20,"hard"],
+  ["sweep",10,"medium"],["feie",10,"medium"],
+  ["rake",30,"hard"],["leaves",30,"hard"],["løv",30,"hard"],
+  ["mow",40,"hard"],["lawn",40,"hard"],["plenen",40,"hard"],["gress",40,"hard"],
+  ["snow",30,"hard"],["snø",30,"hard"],["måke",30,"hard"],
+  ["windows",20,"medium"],["vinduer",20,"medium"],["vinduene",20,"medium"],
+  ["car",30,"hard"],["bilen",30,"hard"],
+  ["homework",30,"medium"],["lekser",30,"medium"],["lesing",20,"easy"],["read",20,"easy"],
+  ["toys",10,"easy"],["leker",10,"easy"],["lego",10,"easy"],
+  ["clothes",5,"easy"],["klær",5,"easy"],["klærne",5,"easy"],
+  ["shoes",3,"easy"],["sko",3,"easy"],["skoene",3,"easy"],
+  ["groceries",10,"medium"],["handle",30,"medium"],["bære",10,"medium"],
+  ["teeth",3,"easy"],["tenner",3,"easy"],["tennene",3,"easy"],["shower",10,"easy"],["dusje",10,"easy"],
+  ["bag",5,"easy"],["sekk",5,"easy"],["sekken",5,"easy"],
+  ["kitchen",15,"medium"],["kjøkkenet",15,"medium"],["stua",15,"medium"],["living room",15,"medium"],
+];
+const VERBS = ("clean wash make feed take empty unload load put tidy fold vacuum hoover sweep mop water walk set clear wipe dust help rake mow do pick hang carry " +
+  "change sort bring scrub shovel brush pack unpack polish organize organise " +
+  "rydde rydd vaske vask re mate ta tømme tøm brette brett støvsuge støvsug feie fei vanne vann gå dekke dekk tørke tørk hjelpe hjelp plukke plukk " +
+  "klippe klipp gjøre gjør henge heng bære bær sortere legge legg sette sett skifte skift måke lufte pakke pakk kaste kast hente hent gi").split(" ");
+const AREA_WORDS = ("kitchen bedroom bathroom living room hall hallway garage garden outside inside upstairs downstairs basement laundry my " +
+  "kjøkken kjøkkenet soverom soverommet bad badet stue stua gang gangen ute inne hage hagen garasje garasjen oppe nede kjeller kjelleren rommet mitt " +
+  "monday tuesday wednesday thursday friday saturday sunday weekend morning evening afternoon daily weekly every day " +
+  "mandag tirsdag onsdag torsdag fredag lørdag søndag helg helgen morgen kveld ettermiddag hver dag uke").split(" ");
+const OTHER_WORDS = /\b(chores?|to ?do|list|gjøremål|oppgaver|husarbeid|plikter|husplikter|week|uke|prize|reward|premie|belønning|ukepenger|lommepenger|money|penger|kr|name|navn|done|ferdig)\b/i;
+
+function lev(a, b){
+  if (Math.abs(a.length - b.length) > 2) return 9;
+  const d = Array.from({length:a.length+1}, (_,i)=>[i]);
+  for (let j=1;j<=b.length;j++) d[0][j]=j;
+  for (let i=1;i<=a.length;i++) for (let j=1;j<=b.length;j++)
+    d[i][j] = Math.min(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
+  return d[a.length][b.length];
+}
+// word w "is" key k, allowing a small reading mistake in longer words
+const near = (w, k) => w === k || (k.length >= 5 && lev(w, k) <= 1) || (k.length >= 8 && lev(w, k) <= 2);
+const wordsOf = s => s.toLowerCase().normalize("NFC").match(/[a-zæøåäöüé]+/g) || [];
+
+function knownChore(words){
+  for (const [kw, min, diff] of KNOWN){
+    const need = kw.split(" ");
+    if (need.every(k => words.some(w => near(w, k)))) return {min, diff};
   }
-  return out;
+  return null;
+}
+// swap misread words for the word they almost are ("dishwaser" -> "dishwasher")
+function fixWords(line){
+  const dict = [...new Set(KNOWN.flatMap(k => k[0].split(" ")).concat(VERBS))].filter(k => k.length >= 5);
+  return line.replace(/[A-Za-zÆØÅæøåÄÖÜäöüé]+/g, w => {
+    const lw = w.toLowerCase();
+    if (dict.includes(lw)) return w;
+    const hit = dict.find(k => near(lw, k));
+    return hit ? (w[0] === w[0].toUpperCase() ? hit[0].toUpperCase() + hit.slice(1) : hit) : w;
+  });
+}
+
+function smartParse(text){
+  let area = null; const chores = [], other = [];
+  for (let raw of String(text).split(/\n/).slice(0, 80)){
+    let line = raw.replace(/[|_~^`"“”]+/g, " ").replace(/\s+/g, " ").trim();
+    // bullets, check boxes, numbers in front
+    for (let i = 0; i < 3; i++) line = line.replace(/^(?:[-–—*•·▪►>+]|\[\s*[xX✓✔]?\s*\]|\(\s*[xX]?\s*\)|[□☐☑✓✔]|[oO0](?=\s)|\d{1,2}[.):])\s*/, "");
+    line = line.replace(/\s*[-–:,.;]+\s*$/, m => m.includes(":") ? ":" : "").trim();
+    if (!/[a-zæøåäöü]{2,}/i.test(line)) continue;                 // junk from the photo
+    const letters = (line.match(/[a-zæøåäöü]/gi) || []).length;
+    if (letters / line.replace(/\s/g, "").length < 0.6) continue;  // mostly symbols = junk
+    line = fixWords(line);
+    const words = wordsOf(line);
+    const hasVerb = words.some(w => VERBS.some(v => near(w, v) && (v.length >= 3 || w === v)));
+    const known = knownChore(words);
+
+    // headings: "Kitchen:", "MONDAY", "Upstairs"
+    const shortLine = words.length <= 3;
+    const allArea = words.length && words.every(w => AREA_WORDS.includes(w));
+    const caps = /[A-ZÆØÅ]{3,}/.test(line) && line === line.toUpperCase();
+    if (/:$/.test(line) && !known && words.length <= 4 || shortLine && allArea && !hasVerb || caps && shortLine && !hasVerb && !known){
+      area = line.replace(/:$/, "").trim().toLowerCase().replace(/^./, c => c.toUpperCase()).slice(0, 30);
+      continue;
+    }
+    // minutes and difficulty written on the line
+    const m = line.match(/(\d{1,3})\s*(min(?:utes?|utter|s)?|m)\b/i) || line.match(/(?:^|\s)(\d{1,3})(?=\s*(?:easy|medium|hard|lett|middels|vanskelig|tung)?\s*$)/i);
+    const dWord = (line.match(/\b(easy|medium|hard|lett|middels|vanskelig|tung)\b/i) || [])[1];
+    const diff = dWord ? ({lett:"easy", middels:"medium", vanskelig:"hard", tung:"hard"}[dWord.toLowerCase()] || dWord.toLowerCase()) : null;
+    let name = line.replace(m ? m[0] : "", " ").replace(dWord ? new RegExp("\\b" + dWord + "\\b", "i") : "", " ")
+                   .replace(/[():]+/g, " ").replace(/\s+/g, " ").replace(/^[\s,-]+|[\s,-]+$/g, "");
+    if (!name) continue;
+    name = name[0].toUpperCase() + name.slice(1);
+
+    const isChore = (known || hasVerb) && !(OTHER_WORDS.test(line) && !known);
+    if (isChore){
+      const mins = m ? Number(m[1]) : known ? known.min : 10;
+      chores.push({name: name.slice(0, 60), minutes: mins > 0 && mins <= 240 ? mins : 10, difficulty: diff || known?.diff || "medium", area});
+    } else if (words.length) {
+      other.push(name.slice(0, 120));
+    }
+  }
+  return {chores, other: other.slice(0, 20)};
 }
 
 async function readList(file, text){
@@ -818,12 +923,13 @@ async function readList(file, text){
   if (!sample){
     // no Claude here (like on GitHub): read the typed list ourselves
     if (!text){ say("Photos only work on the claude.ai link. Type your chores instead.", true); return; }
-    const chores = parseTyped(text);
-    if (!chores.length){ say("Type some chores first.", true); return; }
+    const { chores, other } = smartParse(text);
+    if (!chores.length){ say("I couldn't find any chores in that. Write them like: empty dishwasher, make bed.", true); return; }
     for (const k in photos) delete photos[k];
     lastOrder = []; wonShown = false;
-    state = {example:false, chores: chores.map(mk), other:[]};
-    save(); render(); say("Done! Fastest chore is at the top.");
+    state = {example:false, chores: chores.map(mk), other};
+    save(); render();
+    say(`I found ${chores.length} chore${chores.length===1?"":"s"}${other.length ? ` and ${other.length} other thing${other.length===1?"":"s"}` : ""}. Fastest is at the top! Something wrong? Fix the words in the box and tap Sort my chores.`);
     $("#results").scrollIntoView({behavior:"smooth"});
     return;
   }
@@ -899,12 +1005,14 @@ async function readPhotoHere(file){
     const { data } = await T.recognize(file, "eng+nor", {
       logger: m => { if (m.status === "recognizing text") say(`Reading your photo… ${Math.round(m.progress*100)}%`); }
     });
-    const lines = String(data.text || "").split("\n").map(l => l.replace(/[|_~^]+/g, "").replace(/\s+/g, " ").trim()).filter(l => /[a-zæøå]{2,}/i.test(l));
+    // keep lines the reader is fairly sure about (or that are chores it knows)
+    const raw = (data.lines && data.lines.length ? data.lines : String(data.text || "").split("\n").map(t => ({text:t, confidence:100})));
+    const lines = raw.filter(l => l.confidence >= 45 || knownChore(wordsOf(l.text))).map(l => l.text.replace(/\s+/g, " ").trim()).filter(Boolean);
     if (!lines.length){ say("I couldn't read any words. Try a brighter, closer photo, or type the list.", true); return; }
     $("#typeBox").hidden = false;
     $("#typed").value = lines.join("\n");
-    say("I read this from your photo. Fix any wrong words, add minutes like 10 and easy or hard, then tap Sort my chores.");
-    $("#typed").focus();
+    busy = false;
+    await readList(null, lines.join("\n"));       // the detective finds the real chores and sorts them
   }catch(e){
     say("I couldn't read the photo here (you need internet the first time). Type your list instead.", true);
     $("#typeBox").hidden = false;
