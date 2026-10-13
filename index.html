@@ -878,8 +878,38 @@ Reply with only JSON: {"name": string, "minutes": number, "difficulty": "easy"|"
 $("#listFile").onchange = e => {
   const f = e.target.files[0]; if (!f) return;
   const pic = $("#listPic"); pic.src = URL.createObjectURL(f); pic.hidden = false;
-  readList(f); e.target.value = "";
+  sample ? readList(f) : readPhotoHere(f); e.target.value = "";
 };
+
+// No Claude here (tablet app): read the photo's words on this device, then let the kid check them.
+let tesseractP = null;
+function loadTesseract(){
+  return tesseractP ||= new Promise((ok, bad) => {
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
+    s.onload = () => ok(window.Tesseract); s.onerror = () => { tesseractP = null; bad(new Error("load")); };
+    document.head.append(s);
+  });
+}
+async function readPhotoHere(file){
+  if (busy) return;
+  busy = true; say("Reading your photo… (the first time takes a little while)");
+  try{
+    const T = await loadTesseract();
+    const { data } = await T.recognize(file, "eng+nor", {
+      logger: m => { if (m.status === "recognizing text") say(`Reading your photo… ${Math.round(m.progress*100)}%`); }
+    });
+    const lines = String(data.text || "").split("\n").map(l => l.replace(/[|_~^]+/g, "").replace(/\s+/g, " ").trim()).filter(l => /[a-zæøå]{2,}/i.test(l));
+    if (!lines.length){ say("I couldn't read any words. Try a brighter, closer photo, or type the list.", true); return; }
+    $("#typeBox").hidden = false;
+    $("#typed").value = lines.join("\n");
+    say("I read this from your photo. Fix any wrong words, add minutes like 10 and easy or hard, then tap Sort my chores.");
+    $("#typed").focus();
+  }catch(e){
+    say("I couldn't read the photo here (you need internet the first time). Type your list instead.", true);
+    $("#typeBox").hidden = false;
+  }finally{ busy = false; }
+}
 $("#typeBtn").onclick = () => { $("#typeBox").hidden = !$("#typeBox").hidden; $("#typed").focus(); };
 $("#typedGo").onclick = () => { const t=$("#typed").value.trim(); if (t) readList(null,t); else say("Type some chores first.", true); };
 $("#resetBtn").onclick = () => {
@@ -1021,8 +1051,7 @@ render();
     : "Your account is saved on this device.";
   $("#loginBusy").hidden = true; $("#loginForm").hidden = false;
   if (!sample){
-    $("label[for=listFile]").hidden = true; $("#typeBox").hidden = false;
-    $("#typeHint").hidden = false;
+    $("#typeBox").hidden = false; $("#typeHint").hidden = false;
   } else if (!photoOK){ $("label[for=listFile]").hidden = true; $("#typeBox").hidden = false; }
   // stay logged in on this device
   let last = null; try{ last = lockedTo() || localStorage.getItem("choreRacer.who"); }catch(e){}
