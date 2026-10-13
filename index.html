@@ -1,0 +1,1003 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#171B26">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Chore Racer">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Chore Racer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Nunito:wght@600;800;900&display=swap">
+<style>
+/* Layout: a night race track — checkered header, chores as numbered lanes (1st = fastest), each with a track bar and a little car */
+:root{
+  --asphalt:#171B26; --lane:#222838; --lane-hi:#2B3246; --paint:#F4F6FB; --dim:#9AA3B8; --line:#353D54;
+  --orange:#FF6A2B; --orange-dk:#C2461A; --yellow:#FFD23F; --green:#38D98A; --green-dk:#1F9E5E; --blue:#5AA2FF; --red:#FF6B6B;
+  --display:"Bungee","Impact","Arial Black",sans-serif;
+  --body:"Nunito",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{background:var(--asphalt)}
+body{background:var(--asphalt);color:var(--paint);font-family:var(--body);font-size:16px;line-height:1.5;
+  background-image:repeating-linear-gradient(90deg,transparent 0 calc(50% - 2px),rgba(255,255,255,.035) calc(50% - 2px) calc(50% + 2px),transparent calc(50% + 2px) 100%)}
+.wrap{max-width:700px;margin:0 auto;padding-inline:16px;padding-block:0 56px;display:flex;flex-direction:column;gap:22px}
+.checker{height:22px;margin-inline:-16px;background:conic-gradient(var(--paint) 25%,#111 0 50%,var(--paint) 0 75%,#111 0) 0 0/22px 22px}
+header{display:flex;flex-direction:column;gap:6px;padding-top:6px}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(2.3rem,10vw,3.6rem);line-height:.95;margin:0;letter-spacing:.01em;transform:skewX(-8deg);transform-origin:left}
+h1 span{color:var(--orange);text-shadow:4px 4px 0 var(--orange-dk)}
+.sub{margin:0;color:var(--dim);font-weight:800}
+h2{font-family:var(--display);font-weight:400;font-size:1.25rem;margin:0;line-height:1.2;letter-spacing:.02em}
+.card{background:var(--lane);border:2px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:14px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button,.btn{font:900 1rem var(--body);border:0;border-radius:12px;padding:11px 18px;cursor:pointer;background:var(--orange);color:#1A0E06;
+  display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 0 var(--orange-dk);transition:transform .08s,box-shadow .08s}
+button:active,.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--orange-dk)}
+button.ghost,.btn.ghost{background:var(--lane-hi);color:var(--paint);box-shadow:0 4px 0 #11141D}
+button.ghost:active{box-shadow:0 1px 0 #11141D}
+button.small,.btn.small{padding:7px 13px;font-size:.92rem;border-radius:10px}
+button.go{background:var(--green);color:#06241A;box-shadow:0 4px 0 var(--green-dk)}
+button:disabled{opacity:.5;cursor:default}
+button:focus-visible,.btn:focus-within,textarea:focus-visible,input[type=text]:focus-visible{outline:3px solid var(--yellow);outline-offset:3px}
+input[type=file]{position:absolute;width:1px;height:1px;opacity:0}
+textarea,input[type=text]{width:100%;font:700 1rem var(--body);color:var(--paint);background:var(--asphalt);border:2px solid var(--line);border-radius:12px;padding:10px}
+textarea{min-height:90px;resize:vertical}
+input[type=text]{flex:1 1 160px;width:auto;min-width:0;padding:8px 10px}
+.status{font-weight:900;color:var(--yellow);min-height:1.5em}
+.status.bad{color:var(--red)}
+.listpic{max-height:180px;border-radius:12px;border:2px solid var(--line);align-self:flex-start}
+.tag{font:900 .7rem var(--body);letter-spacing:.08em;text-transform:uppercase;background:var(--lane-hi);color:var(--yellow);border-radius:999px;padding:3px 10px;white-space:nowrap}
+.tag.green{color:var(--green)}
+.total{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.clock{background:#0D1018;border:2px solid var(--line);border-radius:12px;padding:4px 12px;font-weight:800;color:var(--dim)}
+.clock b{font-family:var(--display);font-weight:400;font-size:1.5rem;color:var(--yellow);font-variant-numeric:tabular-nums}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding:4px 2px 8px;scrollbar-width:thin}
+.tab{flex:0 0 auto;background:var(--lane);color:var(--dim);box-shadow:0 4px 0 #11141D;border:2px solid var(--line);padding:8px 14px;border-radius:12px 12px 6px 6px}
+.tab:active{box-shadow:0 1px 0 #11141D}
+.tab.on{background:var(--yellow);color:#1A1405;border-color:var(--yellow);box-shadow:0 4px 0 #A8851C}
+.tab .count{font:900 .75rem var(--body);background:rgba(0,0,0,.25);color:inherit;border-radius:99px;padding:1px 8px;margin-left:2px}
+.ends{display:flex;justify-content:space-between;font:900 .75rem var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+li.chore{background:var(--lane);border:2px solid var(--line);border-left:6px solid var(--blue);border-radius:16px;padding:12px 14px;
+  display:grid;grid-template-columns:auto auto 1fr auto;gap:8px 12px;align-items:center;transition:border-color .4s}
+li.chore:nth-child(1){border-left-color:var(--yellow)}
+li.chore:nth-child(2){border-left-color:#C9D1E0}
+li.chore:nth-child(3){border-left-color:#E0975A}
+li.chore.moved{animation:pop .6s}
+li.chore.running{border-color:var(--green);box-shadow:0 0 0 3px rgba(56,217,138,.18)}
+@keyframes pop{0%{transform:scale(.97)}50%{transform:scale(1.025)}100%{transform:scale(1)}}
+li.chore.isdone{opacity:.55;border-left-color:var(--green)}
+li.chore.isdone .name{text-decoration:line-through}
+.place{font-family:var(--display);font-size:1.05rem;width:2.4em;text-align:center;color:var(--dim)}
+li.chore:nth-child(1) .place{color:var(--yellow)}
+.check{width:32px;height:32px;border-radius:9px;border:3px solid var(--line);background:var(--asphalt);padding:0;justify-content:center;color:var(--asphalt);box-shadow:none}
+.check:active{transform:none;box-shadow:none}
+.isdone .check{background:var(--green);border-color:var(--green)}
+.name{font-weight:900;font-size:1.05rem;min-width:0;overflow-wrap:anywhere;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.mins b{font-family:var(--display);font-weight:400;font-size:1.2rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mins small{font:800 .8rem var(--body);color:var(--dim);margin-left:2px}
+.sub-row{grid-column:3/5}
+.bar{position:relative;height:16px;border-radius:99px;background:#0D1018;
+  background-image:repeating-linear-gradient(90deg,transparent 0 10px,rgba(255,255,255,.12) 10px 18px);background-size:100% 2px;background-repeat:no-repeat;background-position:0 50%}
+.bar i{position:absolute;inset:0 auto 0 0;display:block;background:linear-gradient(90deg,transparent,var(--orange));border-radius:99px;transition:width .5s}
+.running .bar i{background:linear-gradient(90deg,transparent,var(--green));transition:width 1s linear}
+.car{position:absolute;top:50%;width:30px;height:16px;transform:translate(-80%,-50%);transition:left .5s}
+.running .car{transition:left 1s linear}
+.timer{font-family:var(--display);font-size:1.3rem;font-variant-numeric:tabular-nums;color:var(--green)}
+.ask{grid-column:1/5;background:#2E2A1A;border:2px dashed var(--yellow);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.ask p{margin:0;font-weight:900;color:var(--yellow)}
+.note{margin:0;font-weight:800;font-size:.95rem;color:var(--blue)}
+.other{background:var(--lane);border:2px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.other h3{margin:0;font:900 .72rem var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.other p{margin:0;font-weight:800}
+.why{color:var(--dim);font-size:.92rem;margin:0;font-weight:700}
+.thumb{width:56px;height:56px;object-fit:cover;border-radius:10px}
+.cheer{font-family:var(--display);font-size:1.4rem;color:var(--green);text-align:center;margin:0}
+.memory{color:var(--dim);font-size:.9rem;margin:0;font-weight:700}
+.times{display:flex;flex-direction:column}
+.trow{display:grid;grid-template-columns:1fr auto;gap:0 12px;padding:8px 0;border-top:1px solid var(--line)}
+.tname{font-weight:900;text-transform:capitalize;min-width:0;overflow-wrap:anywhere}
+.tavg{font-family:var(--display);font-variant-numeric:tabular-nums;color:var(--green)}
+.tlist{grid-column:1/3;color:var(--dim);font-size:.85rem;font-variant-numeric:tabular-nums;font-weight:700}
+.topnav{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-block:8px;background:var(--asphalt)}
+.navbtn{background:var(--lane);color:var(--dim);border:2px solid var(--line);box-shadow:0 4px 0 #0B0D14;font-family:var(--display);font-weight:400;letter-spacing:.03em}
+.navbtn.on{background:var(--orange);color:#1A0E06;border-color:var(--orange);box-shadow:0 4px 0 var(--orange-dk)}
+.raceview,.shopview{display:flex;flex-direction:column;gap:22px}
+.shoph,.shopsec h3{margin:0;font-family:var(--display);font-weight:400;font-size:1.1rem}
+#shopItems{display:flex;flex-direction:column;gap:22px}
+.shopsec{display:flex;flex-direction:column;gap:10px}
+.shopgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.item{background:var(--lane);border:2px solid var(--line);border-radius:16px;padding:10px;display:flex;flex-direction:column;gap:8px;align-items:stretch;text-align:center}
+.item.using{border-color:var(--green)}
+.item button{justify-content:center}
+.preview{height:70px;border-radius:10px;background:#0D1018;display:grid;place-items:center;overflow:hidden}
+.bigicon{font-size:1.6rem;letter-spacing:.15em;font-weight:900}
+.p-classic .bigicon{color:var(--orange)} .p-stars .bigicon{color:var(--yellow)} .p-hearts .bigicon{color:#FF4D6D} .p-coins .bigicon{color:#F2B705}
+.fungrid{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
+.item.fun{text-align:left}
+.item.fun.big{border-color:var(--yellow);background:linear-gradient(160deg,#3A2F12,var(--lane) 60%)}
+.item.fun.big .tag{align-self:flex-start}
+.funicon{font-size:2.4rem;line-height:1}
+.fundesc{margin:0;color:var(--dim);font-size:.85rem;font-weight:700;flex:1}
+.iname{font-weight:900;min-width:0;overflow-wrap:anywhere}
+button.broke{background:var(--lane-hi);color:var(--dim);box-shadow:0 4px 0 #0B0D14}
+.prizelist{display:flex;flex-direction:column;gap:8px}
+.prize{display:flex;align-items:center;gap:8px;background:var(--asphalt);border:2px solid var(--line);border-radius:12px;padding:8px 10px}
+.prize .iname{flex:1}
+#prizeForm input[type=number]{width:90px;font:700 1rem var(--body);color:var(--paint);background:var(--asphalt);border:2px solid var(--line);border-radius:12px;padding:8px 10px}
+.bought{display:flex;flex-direction:column;gap:2px;border-top:1px solid var(--line);padding-top:10px}
+.bought h3{margin:0 0 4px;font:900 .72rem var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.bought p{margin:0;font-weight:700}
+.scorebox{position:relative;margin-left:auto;display:inline-flex;align-items:center;gap:8px;background:#0D1018;border:2px solid var(--yellow);border-radius:14px;padding:6px 14px}
+.scorebox b{font-family:var(--display);font-weight:400;font-size:1.7rem;color:var(--yellow);font-variant-numeric:tabular-nums;line-height:1}
+.scorebox span{font-weight:900;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-size:.8rem}
+.scorebox.bump{animation:pop .5s}
+.plus{position:absolute;right:-8px;top:-6px;font-family:var(--display);color:var(--green);font-size:1.2rem;pointer-events:none;animation:floatup 1.3s ease-out forwards}
+@keyframes floatup{from{transform:translateY(0);opacity:1}to{transform:translateY(-36px);opacity:0}}
+.howpts{margin:0;color:var(--dim);font-size:.85rem;font-weight:700}
+.pts{color:var(--yellow)}
+.tag.diff.d-easy{color:var(--green)} .tag.diff.d-medium{color:var(--blue)} .tag.diff.d-hard{color:var(--red)}
+.whochip{display:inline-flex;align-items:center;gap:8px;font-weight:900;color:var(--paint)}
+li.empty{border:2px dashed var(--line);border-radius:16px;padding:18px;color:var(--dim);font-weight:800;text-align:center}
+.login{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:16px;background:var(--asphalt);overflow-y:auto;
+  background-image:repeating-linear-gradient(90deg,transparent 0 calc(50% - 2px),rgba(255,255,255,.05) calc(50% - 2px) calc(50% + 2px),transparent calc(50% + 2px) 100%)}
+.login-card{background:var(--lane);border:3px solid var(--line);border-radius:24px;padding:24px;max-width:420px;width:100%;display:flex;flex-direction:column;gap:12px}
+.login-card .flag{height:14px;border-radius:4px;background:conic-gradient(var(--paint) 25%,#111 0 50%,var(--paint) 0 75%,#111 0) 0 0/14px 14px}
+.login-title{font-family:var(--display);font-size:clamp(2rem,9vw,2.8rem);line-height:1;transform:skewX(-8deg);transform-origin:left}
+.login-title span{color:var(--orange);text-shadow:3px 3px 0 var(--orange-dk)}
+.login-sub{margin:0;font-weight:900;color:var(--dim)}
+.login-form{display:flex;flex-direction:column;gap:8px}
+.login-form label{font:900 .75rem var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.login-form input{width:100%;flex:none;font:700 1.05rem var(--body);color:var(--paint);background:var(--asphalt);border:2px solid var(--line);border-radius:12px;padding:10px 12px}
+.login-form input:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
+/* celebration */
+#party{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:16px;background:rgba(10,12,18,.75)}
+[hidden]{display:none!important}
+#party canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.party-card{position:relative;background:var(--lane);border:3px solid var(--yellow);border-radius:24px;padding:28px 24px 22px;max-width:420px;width:100%;text-align:center;display:flex;flex-direction:column;gap:12px;align-items:center;animation:zoom .45s cubic-bezier(.2,1.6,.4,1)}
+.party-card .flag{width:100%;height:14px;border-radius:4px;background:conic-gradient(var(--paint) 25%,#111 0 50%,var(--paint) 0 75%,#111 0) 0 0/14px 14px}
+.party-big{font-family:var(--display);font-size:clamp(2.2rem,11vw,3.2rem);line-height:1;color:var(--yellow);text-shadow:3px 3px 0 var(--orange-dk);transform:skewX(-8deg)}
+.party-msg{margin:0;font-weight:900;font-size:1.15rem}
+.party-stat{font-family:var(--display);font-size:1.1rem;color:var(--green)}
+@keyframes zoom{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+@media (max-width:460px){
+  li.chore{grid-template-columns:auto auto 1fr;gap:8px 10px}
+  .mins{grid-column:3/4}
+  .sub-row{grid-column:2/4}
+  .ask{grid-column:1/4}
+}
+@media (prefers-reduced-motion:reduce){.bar i,.car{transition:none}li.chore.moved,.party-card{animation:none}}
+</style>
+
+<div class="wrap">
+  <div class="checker" aria-hidden="true"></div>
+  <header>
+    <h1>Chore <span>Racer</span></h1>
+    <p class="sub">Snap your chore list. I line them up from fastest to slowest. Ready, set, GO!</p>
+  </header>
+
+  <nav class="topnav">
+    <button class="navbtn on" id="navRace">Race</button>
+    <button class="navbtn" id="navShop">Shop</button>
+    <span class="whochip"><b id="who"></b> <button class="small ghost" id="logoutBtn">Log out</button></span>
+    <div class="scorebox" id="scoreBox" aria-live="polite">
+      <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#FFD23F" stroke="#C28A0E" stroke-width="2"/><circle cx="12" cy="12" r="6" fill="none" stroke="#C28A0E" stroke-width="1.5"/><path d="M12 8.5v7" stroke="#C28A0E" stroke-width="2" stroke-linecap="round"/></svg>
+      <b id="score">0</b><span>coins</span>
+    </div>
+  </nav>
+
+  <div id="shopView" class="shopview" hidden>
+    <div class="card">
+      <h2>Coin Shop</h2>
+      <p class="howpts">Spend your coins on new cars, tracks, confetti and sounds. Or save up for a real prize!</p>
+      <div class="status" id="shopMsg" role="status"></div>
+    </div>
+    <div id="shopItems"></div>
+    <section class="card">
+      <h3 class="shoph">Real prizes</h3>
+      <p class="howpts">Make your own prizes with a grown-up. When you buy one, show it to them.</p>
+      <div id="prizeList" class="prizelist"></div>
+      <form id="prizeForm" class="row">
+        <input type="text" id="prizeName" placeholder="Prize, like: 30 min of games" maxlength="60">
+        <input type="number" id="prizePrice" placeholder="Coins" min="1" inputmode="numeric">
+        <button>Add prize</button>
+      </form>
+      <div id="boughtList" class="bought" hidden></div>
+    </section>
+  </div>
+
+  <div id="raceView" class="raceview">
+  <p class="howpts">Every chore gives coins. Longer and harder chores give more: Easy ×1, Medium ×2, Hard ×3. Use the timer: beat my guess +40, new record +60. Finish them all +100!</p>
+  <section class="card" id="startCard">
+    <h2>Step 1 · Your chore list</h2>
+    <div class="row">
+      <label class="btn" for="listFile">Take or pick a photo<input type="file" id="listFile" accept="image/*" capture="environment"></label>
+      <button class="ghost" id="typeBtn">Type it instead</button>
+    </div>
+    <p class="howpts" id="typeHint" hidden>One chore on each line. Add minutes and how hard it is, like: <b>empty dishwasher 10 hard</b>. Write a room with a colon, like <b>Kitchen:</b>, to make a tab.</p>
+    <div id="typeBox" hidden>
+      <textarea id="typed" placeholder="One chore on each line, like:&#10;make bed&#10;feed the cat&#10;empty dishwasher"></textarea>
+      <div class="row" style="margin-top:10px"><button id="typedGo">Sort my chores</button></div>
+    </div>
+    <img id="listPic" class="listpic" alt="Your chore list" hidden>
+    <div class="status" id="status" role="status"></div>
+  </section>
+
+  <section id="results" style="display:flex;flex-direction:column;gap:12px">
+    <div class="total">
+      <h2>Step 2 · Race order <span class="tag" id="exampleTag">Example</span></h2>
+      <div class="clock">Time left <b id="totalMins">0</b> min</div>
+    </div>
+    <div class="other" id="other" hidden></div>
+    <div class="tabs" id="tabs" role="tablist" aria-label="Areas" hidden></div>
+    <div class="ends"><span>Fastest</span><span>Slowest</span></div>
+    <ol id="list"></ol>
+    <p class="cheer" id="cheer" hidden>All done! You won the race!</p>
+    <div class="row"><button class="ghost" id="resetBtn">Start a new list</button></div>
+    <section class="card" id="memory" hidden></section>
+  </section>
+  </div>
+</div>
+
+<div id="login" class="login" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+  <div class="login-card">
+    <div class="flag" aria-hidden="true"></div>
+    <div class="login-title" id="loginTitle">Chore <span>Racer</span></div>
+    <p class="login-sub">Who's racing today?</p>
+    <p class="status" id="loginBusy">Getting ready…</p>
+    <form id="loginForm" class="login-form" hidden autocomplete="off">
+      <label for="loginUser">Username</label>
+      <input type="text" id="loginUser" maxlength="20" autocapitalize="off" spellcheck="false" placeholder="like racer_andreas">
+      <label for="loginCode">Secret code</label>
+      <input type="password" id="loginCode" maxlength="30" placeholder="at least 4 letters or numbers">
+      <div class="row">
+        <button type="submit">Log in</button>
+        <button type="button" class="ghost" id="newAcct">Make new account</button>
+      </div>
+      <p class="status" id="loginMsg" role="status"></p>
+      <p class="howpts" id="loginWhere"></p>
+    </form>
+  </div>
+</div>
+
+<div id="party" hidden role="dialog" aria-modal="true" aria-labelledby="partyBig">
+  <canvas id="confetti"></canvas>
+  <div class="party-card">
+    <div class="flag" aria-hidden="true"></div>
+    <div class="party-big" id="partyBig">GOOD JOB!</div>
+    <p class="party-msg" id="partyMsg"></p>
+    <div class="party-stat" id="partyStat"></div>
+    <button id="partyClose">Keep racing!</button>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const EXAMPLE = [
+  {name:"Make your bed", minutes:3, ask:null, area:"Bedroom", difficulty:"easy"},
+  {name:"Feed the cat", minutes:2, ask:null, area:"Kitchen", difficulty:"easy"},
+  {name:"Empty the dishwasher", minutes:10, ask:"Show me a pic of your dishwasher open", area:"Kitchen", difficulty:"medium"},
+  {name:"Clean your room", minutes:25, ask:"Show me a pic of your room", area:"Bedroom", difficulty:"hard"},
+];
+let saved = null;           // the logged-in player's data (filled in by applyData)
+let learned = saved?.learned || {};      // chore name -> list of minutes it really took (newest last)
+for (const k in learned) if (!Array.isArray(learned[k])) learned[k] = [Number(learned[k])].filter(n=>n>0);
+// one-time clean-up: older versions saved quick test taps as "1 min" times
+if (saved && !saved.cleaned1){ for (const k in learned){ learned[k] = learned[k].filter(n=>n>1); if (!learned[k].length) delete learned[k]; } }
+const avg = k => { const a = learned[k]; return a && a.length ? Math.max(1, Math.round(a.reduce((s,n)=>s+n,0)/a.length)) : null; };
+let state = saved?.chores && !saved.example ? {example:saved.example, chores:saved.chores, other:saved.other, won:saved.won, tab:saved.tab} : {example:true, chores:EXAMPLE.map(mk)};
+let sample = null, photoOK = false, busy = false;
+const photos = {};        // id -> object URL (not saved)
+const talking = {};       // id -> true while Claude looks at an answer
+const typing = {};        // id -> true when "Tell me instead" is open
+let lastOrder = [], movedIds = new Set();
+
+function key(n){ return String(n).toLowerCase().replace(/[^a-z0-9 ]/g,"").replace(/\s+/g," ").trim(); }
+function mk(c){
+  const k = key(c.name), m = avg(k), n = learned[k]?.length || 0;
+  return {id:Math.random().toString(36).slice(2,9), name:String(c.name||"Chore").slice(0,80),
+    minutes: m || clampMin(c.minutes), prev:null, diff: normDiff(c.difficulty), note: c.note ? String(c.note).slice(0,160) : "", area: c.area && String(c.area).trim() ? String(c.area).trim().slice(0,30) : "", ask: m ? null : (c.ask||null),
+    why: m ? (n===1 ? `Last time you did it in ${m} min, so I used that.` : `Your average from ${n} times is ${m} min.`) : "", done:false, start:null};
+}
+function clampMin(m){ m = Math.round(Number(m)); return isFinite(m) && m>0 ? Math.min(m,240) : 5; }
+function save(){ if (who) Accounts.saveData({...state, learned, score, shop, cleaned1:true, exampleEarned:[...exampleEarned]}); }
+// data saved by older versions, before there were accounts
+function legacyLoad(){ try{ const s = JSON.parse(localStorage.getItem("choreRacer")); return s && typeof s==="object" ? s : null; }catch(e){ return null; } }
+
+function say(msg, bad){ const s=$("#status"); s.textContent=msg||""; s.classList.toggle("bad",!!bad); }
+function copyFor(code){
+  return ({
+    not_granted:"You need to say yes to let Claude help. Reload the page to try again.",
+    sampling_disabled:"Claude can't help on this account right now.",
+    rate_limited:"Too many tries. Wait a minute, then try again.",
+    image_rejected:"I can't open that picture. Try a different photo.",
+    images_unavailable:"Photos don't work here. Tap 'Tell me instead'.",
+    invalid_json:"I got mixed up. Try again.",
+    refused:"I can't help with that picture. Try another one.",
+    session_expired:"Please sign in to Claude again."
+  })[code] || "Something went wrong. Try again.";
+}
+const fmt = s => Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
+
+const OTHER = "Other";
+function inArea(c, t){ return !t || t==="All" || (t===OTHER ? !c.area : c.area===t); }
+function el(tag, cls, text){ const e=document.createElement(tag); if(cls) e.className=cls; if(text!=null) e.textContent=text; return e; }
+
+function render(){
+  $("#exampleTag").hidden = !state.example;
+  const oth = $("#other"), lines = Array.isArray(state.other) ? state.other : [];
+  oth.hidden = !lines.length; oth.textContent = "";
+  if (lines.length){ oth.append(el("h3",null,"Also on your list")); lines.forEach(t=>oth.append(el("p",null,t))); }
+  // area tabs: only when the list says which area/room chores are in
+  const areas = [...new Set(state.chores.map(c=>c.area).filter(Boolean))];
+  const hasLoose = state.chores.some(c=>!c.area);
+  const tabNames = areas.length ? ["All", ...areas, ...(hasLoose ? [OTHER] : [])] : [];
+  if (!tabNames.includes(state.tab)) state.tab = "All";
+  const tabs = $("#tabs"); tabs.textContent = ""; tabs.hidden = !tabNames.length;
+  for (const t of tabNames){
+    const inTab = state.chores.filter(c => inArea(c, t));
+    const left = inTab.filter(c=>!c.done).length;
+    const b = el("button","tab"+(state.tab===t?" on":""));
+    b.setAttribute("role","tab"); b.setAttribute("aria-selected", state.tab===t);
+    b.append(t, el("span","count", left ? String(left) : "✓"));
+    b.onclick = () => { state.tab = t; lastOrder = []; save(); render(); };
+    tabs.append(b);
+  }
+  const list = state.chores.filter(c => inArea(c, state.tab)).sort((a,b)=>(a.done-b.done)||(a.minutes-b.minutes));
+  // spot chores that changed place so they can flash
+  const order = list.map(c=>c.id);
+  if (lastOrder.length) order.forEach((id,i)=>{ if (lastOrder.indexOf(id)!==i && lastOrder.includes(id)) movedIds.add(id); });
+  lastOrder = order;
+  const max = Math.max(1,...list.map(c=>c.minutes));
+  $("#totalMins").textContent = list.filter(c=>!c.done).reduce((t,c)=>t+c.minutes,0);
+  const ol = $("#list"); ol.textContent = "";
+  list.forEach((c, i) => {
+    const li = el("li","chore"+(c.done?" isdone":"")+(c.start?" running":"")+(movedIds.has(c.id)?" moved":""));
+    const place = el("div","place", c.done ? "✓" : ordinal(i+1));
+    const chk = el("button","check"); chk.setAttribute("aria-label",(c.done?"Undo ":"Done: ")+c.name);
+    chk.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>';
+    chk.onclick = () => {
+      if (c.start) return finishTimer(c);
+      c.done = !c.done;
+      if (c.done){ const got = award(c, chorePoints(c)); if (!got && state.example) c.why = "You already got coins for this example chore. Snap your real chore list to earn more!"; }
+      else takeBack(c);
+      save(); render();
+      if (c.done) maybeWon();
+    };
+
+    const name = el("div","name"); name.append(c.name);
+    if (c.done && c.pts){ const t = el("span","tag pts"); t.innerHTML = `+${c.pts} ${COIN}`; name.append(t); }
+    else if (!c.done && !(state.example && exampleEarned.has(key(c.name)))){ const t = el("span","tag pts"); t.innerHTML = `${chorePoints(c)} ${COIN}`; name.append(t); }
+    if (!c.done){ const d = normDiff(c.diff); name.append(el("span","tag diff d-"+d, DIFF[d].label)); }
+    if (c.prev!=null && c.prev!==c.minutes) name.append(el("span","tag", `was ${c.prev} min`));
+    const runs = learned[key(c.name)]?.length || 0;
+    if (runs) name.append(el("span","tag green", runs===1 ? "you did it once" : `avg of ${runs} times`));
+
+    const mins = el("div","mins");
+    mins.append(el("b",null,String(c.minutes)), el("small",null,"min"));
+
+    const bar = el("div","bar sub-row"); const fill = el("i");
+    const car = el("span","car"); car.innerHTML = carSvg();
+    if (c.start){ bar.dataset.start = c.start; bar.dataset.goal = c.minutes; }
+    const pct = c.start ? runPct(c.start, c.minutes) : Math.max(8, c.minutes/max*100);
+    fill.style.width = pct+"%"; car.style.left = pct+"%";
+    bar.append(fill, car);
+    li.append(place,chk,name,mins,bar);
+    if (c.note) li.append(el("p","note sub-row","✎ "+c.note));
+
+    if (!c.done){
+      const tools = el("div","row sub-row");
+      if (c.start){
+        const t = el("span","timer"); t.dataset.start = c.start; t.textContent = fmt(Math.floor((Date.now()-c.start)/1000));
+        const stop = el("button","small go","I'm done!"); stop.onclick = () => finishTimer(c);
+        const cancel = el("button","small ghost","Cancel"); cancel.onclick = () => { c.start=null; save(); render(); };
+        tools.append(t, stop, cancel);
+      } else {
+        const go = el("button","small ghost","▶ Start timer"); go.onclick = () => { c.start = Date.now(); save(); render(); };
+        tools.append(go);
+      }
+      li.append(tools);
+    }
+    if (c.why) li.append(el("p","why sub-row",c.why));
+
+    if (c.ask && !c.done && sample){
+      const box = el("div","ask");
+      box.append(el("p",null, talking[c.id] ? "Looking… thinking about your answer." : c.ask));
+      const row = el("div","row");
+      if (photos[c.id]){ const im=el("img","thumb"); im.src=photos[c.id]; im.alt=""; row.append(im); }
+      if (!talking[c.id]){
+        const lab = el("label","btn small");
+        const inp = document.createElement("input"); inp.type="file"; inp.accept="image/*"; inp.setAttribute("capture","environment"); inp.id="ask-"+c.id;
+        lab.append("Send a photo", inp);
+        inp.onchange = () => inp.files[0] && answer(c, inp.files[0], "");
+        lab.hidden = !photoOK;
+        const tell = el("button","small ghost","Tell me instead"); tell.onclick = () => { typing[c.id]=!typing[c.id]; render(); document.getElementById("say-"+c.id)?.focus(); };
+        const skip = el("button","small ghost","Skip"); skip.onclick = () => { c.ask=null; save(); render(); };
+        row.append(lab, tell, skip);
+      }
+      box.append(row);
+      if (typing[c.id] && !talking[c.id]){
+        const f = el("form","row"); const t = document.createElement("input"); t.type="text"; t.id="say-"+c.id; t.placeholder="Like: it's only half full";
+        const send = el("button","small","Send"); f.append(t, send);
+        f.onsubmit = e => { e.preventDefault(); const v=t.value.trim(); if (v) answer(c, null, v); };
+        box.append(f);
+      }
+      li.append(box);
+    }
+    ol.append(li);
+  });
+  if (!list.length) ol.append(el("li","empty", "No chores yet. Snap or type your chore list in Step 1 and they show up here."));
+  movedIds.clear();
+  $("#cheer").hidden = !(list.length && list.every(c=>c.done) && !state.example);
+  renderTimes();
+}
+
+function renderTimes(){
+  const box = $("#memory"), keys = Object.keys(learned).filter(k=>learned[k].length);
+  box.hidden = !keys.length; box.textContent = "";
+  if (!keys.length) return;
+  box.append(el("h2",null,"My times"), el("p","memory","Every time you use the timer, I add it and work out your average."));
+  const tbl = el("div","times");
+  keys.sort((a,b)=>avg(a)-avg(b)).forEach(k=>{
+    const a = learned[k], best = Math.min(...a);
+    const r = el("div","trow");
+    r.append(el("span","tname",k), el("span","tavg",avg(k)+" min avg"),
+      el("span","tlist", a.slice(-5).map(n=>n+"m").join(" · ") + (a.length>5?" …":"") + `  (best ${best}m)`));
+    tbl.append(r);
+  });
+  box.append(tbl);
+  const row = el("div","row");
+  const clr = el("button","small ghost", clearAsk ? "Yes, clear all my times" : "Clear my times");
+  clr.onclick = () => {
+    if (!clearAsk){ clearAsk = true; return renderTimes(); }
+    clearAsk = false; learned = {};
+    state.chores.forEach(c => { if (!c.done && c.why && /average|Last time/.test(c.why)) c.why = ""; });
+    save(); render();
+  };
+  row.append(clr);
+  if (clearAsk){ const no = el("button","small","No, keep them"); no.onclick = () => { clearAsk = false; renderTimes(); }; row.append(no); }
+  box.append(row);
+}
+let clearAsk = false;
+
+const wheel = (x, r=2.6) => `<circle cx="${x}" cy="${15.4-r}" r="${r}" fill="#111" stroke="#F4F6FB" stroke-width="1"/>`;
+function carSvg(it, w=30){
+  it = it || itemById("car", shop.car) || SHOP.car.items[0];
+  const c = it.color, body = `<path d="M2 11 L4 6 Q5 4 8 4 L17 4 Q19 4 21 6 L24 8 Q28 8.5 28 11 L28 12 L2 12 Z" fill="${c}"/><path d="M9 5.5 L16 5.5 L19 8 L8 8 Z" fill="#9FD3FF"/>`;
+  const art = {
+    car: body + wheel(8) + wheel(22),
+    police: body + `<rect x="4" y="9" width="23" height="1.6" fill="#2B3246"/><rect x="10" y="1.6" width="3.5" height="2.4" fill="#FF4D4D"/><rect x="13.5" y="1.6" width="3.5" height="2.4" fill="#3D8BFF"/>` + wheel(8) + wheel(22),
+    f1: `<path d="M1 9 L4 9 L4 5.5 L6 5.5 L6 9 L11 9 L13 6.5 L18 6.5 L20 9 L27 9.5 Q29.5 10 29.5 11.5 L29.5 12.5 L1 12.5 Z" fill="${c}"/><circle cx="15.5" cy="6.4" r="1.7" fill="#111"/>` + wheel(7,3) + wheel(23,3),
+    truck: `<rect x="1" y="2.5" width="17" height="7.5" rx="1" fill="${c}"/><path d="M18 4.5 H24 L28 8.5 V10 H18 Z" fill="${c}"/><path d="M19.5 5.5 H23.5 L26 8.5 H19.5Z" fill="#9FD3FF"/>` + wheel(6,3.3) + wheel(23,3.3),
+    rocket: `<path d="M5 3.5 H20 Q29.5 8 20 12.5 H5 Z" fill="${c}"/><circle cx="18" cy="8" r="2" fill="#9FD3FF"/><path d="M5 3.5 L1.5 1 L9 3.5 Z M5 12.5 L1.5 15 L9 12.5Z" fill="#FF6A2B"/><path d="M5 5.8 L0 8 L5 10.2 Z" fill="#FFD23F"/>`
+  }[it.kind] || body;
+  return `<svg viewBox="0 0 30 16" width="${w}" height="${w*16/30}" aria-hidden="true">${art}</svg>`;
+}
+const COIN = '<svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true" style="vertical-align:-0.15em"><circle cx="12" cy="12" r="10" fill="#FFD23F" stroke="#C28A0E" stroke-width="2"/><circle cx="12" cy="12" r="6" fill="none" stroke="#C28A0E" stroke-width="1.5"/><path d="M12 8.5v7" stroke="#C28A0E" stroke-width="2" stroke-linecap="round"/></svg>';
+function ordinal(n){ const s = n%100>10&&n%100<14 ? "th" : ({1:"st",2:"nd",3:"rd"})[n%10] || "th"; return n+s; }
+function runPct(start, goalMin){ return Math.min(100, Math.max(3, (Date.now()-start)/(goalMin*60000)*100)); }
+
+// ---- celebration ----
+let confettiStop = null;
+function cheerSound(id){
+  const snd = itemById("sound", id || shop.sound) || SHOP.sound.items[0];
+  try{
+    const ac = new (window.AudioContext||window.webkitAudioContext)();
+    snd.notes.forEach((f,i)=>{
+      const o = ac.createOscillator(), g = ac.createGain(); o.type=snd.wave; o.frequency.value=f;
+      const t = ac.currentTime + i*snd.step, len = i===snd.notes.length-1 ? .4 : snd.step*1.8;
+      g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(.12,t+.02); g.gain.exponentialRampToValueAtTime(.0001,t+len);
+      o.connect(g).connect(ac.destination); o.start(t); o.stop(t+len+.05);
+    });
+    setTimeout(()=>ac.close(), 2500);
+  }catch(e){}
+}
+function confetti(){
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const cv = $("#confetti"), ctx = cv.getContext("2d"), dpr = devicePixelRatio||1;
+  cv.width = innerWidth*dpr; cv.height = innerHeight*dpr; ctx.scale(dpr,dpr);
+  const style = shop.party || "classic";
+  const cols = style==="hearts" ? ["#FF4D6D","#FF8FAB","#FFB3C6","#E5383B"]
+             : style==="coins" ? ["#FFD23F","#F2B705","#FFE380"]
+             : ["#FF6A2B","#FFD23F","#38D98A","#5AA2FF","#F4F6FB"];
+  const bits = Array.from({length:140},()=>({x:innerWidth/2+(Math.random()-.5)*80,y:innerHeight*.45,vx:(Math.random()-.5)*14,vy:-Math.random()*14-4,
+    s:(style==="classic"?6:10)+Math.random()*7,r:Math.random()*6,vr:(Math.random()-.5)*.4,c:cols[Math.random()*cols.length|0],sq:Math.random()<.5}));
+  const shape = (b) => {
+    const s = b.s;
+    if (style==="stars"){ ctx.beginPath(); for (let i=0;i<10;i++){ const r = i%2 ? s*.22 : s*.55, a = i*Math.PI/5 - Math.PI/2; ctx.lineTo(Math.cos(a)*r, Math.sin(a)*r); } ctx.fill(); }
+    else if (style==="hearts"){ const r = s/4; ctx.beginPath(); ctx.arc(-r,0,r,Math.PI,0); ctx.arc(r,0,r,Math.PI,0); ctx.lineTo(0,s*.6); ctx.closePath(); ctx.fill(); }
+    else if (style==="coins"){ ctx.scale(Math.abs(Math.cos(b.r*2))+.15,1); ctx.beginPath(); ctx.arc(0,0,s/2,0,7); ctx.fill(); ctx.strokeStyle="#C28A0E"; ctx.lineWidth=1.5; ctx.stroke(); }
+    else if (b.sq) ctx.fillRect(-s/2,-s/4,s,s/2);
+    else { ctx.beginPath(); ctx.arc(0,0,s/3,0,7); ctx.fill(); }
+  };
+  let alive = true, t0 = performance.now();
+  confettiStop = () => { alive = false; ctx.clearRect(0,0,innerWidth,innerHeight); };
+  (function frame(now){
+    if (!alive) return;
+    ctx.clearRect(0,0,innerWidth,innerHeight);
+    for (const b of bits){ b.vy += .35; b.vx *= .99; b.x += b.vx; b.y += b.vy; b.r += b.vr;
+      ctx.save(); ctx.translate(b.x,b.y); ctx.rotate(b.r); ctx.fillStyle=b.c;
+      shape(b); ctx.restore(); }
+    if (now - t0 < 4000) requestAnimationFrame(frame); else confettiStop();
+  })(t0);
+}
+function celebrate(big, msg, stat){
+  $("#partyBig").textContent = big; $("#partyMsg").textContent = msg; $("#partyStat").textContent = stat || "";
+  $("#party").hidden = false; $("#partyClose").focus();
+  cheerSound(); confetti();
+}
+$("#partyClose").onclick = () => { $("#party").hidden = true; confettiStop && confettiStop(); maybeWon(); };
+let wonShown = false;
+function maybeWon(){
+  if (!$("#party").hidden || state.example || wonShown || state.won) return;
+  if (state.chores.length && state.chores.every(c=>c.done)){
+    wonShown = true; state.won = true;
+    addPoints(WIN_BONUS); save();
+    celebrate("YOU WON!", "Every chore is done. You crossed the finish line!", `+${WIN_BONUS} bonus coins!`);
+  }
+}
+
+// ---- coins ----
+// Every chore: 5 coins + 2 per minute it should take (longer chores pay more). Timer bonuses: +20 faster than the guess, +30 new record. All done: +50.
+const WIN_BONUS = 100;
+let score = Number(saved?.score) || 0;
+// harder chores pay more: easy ×1, medium ×2, hard ×3
+const DIFF = {easy:{label:"Easy", x:1}, medium:{label:"Medium", x:2}, hard:{label:"Hard", x:3}};
+function normDiff(d){ d = String(d||"").toLowerCase(); return ["easy","medium","hard"].includes(d) ? d : "medium"; }
+function chorePoints(c, min){ return Math.round((10 + 4*Math.min(min ?? c.minutes, 120)) * DIFF[normDiff(c.diff)].x); }
+// the example list pays each chore only once ever, so it can't be reset for free coins
+let exampleEarned = new Set(saved?.exampleEarned || []);
+function addPoints(n){
+  score = Math.max(0, score + n);
+  const s = $("#score"); s.textContent = score;
+  if (!$("#shopView").hidden) renderShop();
+  if (n > 0){
+    const f = el("span","plus","+"+n); $("#scoreBox").append(f);
+    setTimeout(()=>f.remove(), 1300);
+    $("#scoreBox").classList.remove("bump"); void $("#scoreBox").offsetWidth; $("#scoreBox").classList.add("bump");
+  }
+}
+function award(c, pts){
+  if (state.example){
+    const k = key(c.name);
+    if (exampleEarned.has(k)) return 0;
+    exampleEarned.add(k);
+  }
+  c.pts = (c.pts||0) + pts; addPoints(pts); return pts;
+}
+function takeBack(c){ if (c.pts){ addPoints(-c.pts); c.pts = 0; if (state.example) exampleEarned.delete(key(c.name)); } if (state.won){ state.won = false; wonShown = false; addPoints(-WIN_BONUS); } }
+
+// ---- shop ----
+const SHOP = {
+  car: {title:"Race cars", items:[
+    {id:"car-orange", name:"Orange Racer", price:0, kind:"car", color:"#FF6A2B"},
+    {id:"car-blue", name:"Blue Bolt", price:60, kind:"car", color:"#5AA2FF"},
+    {id:"car-green", name:"Green Machine", price:100, kind:"f1", color:"#38D98A"},
+    {id:"car-police", name:"Police Car", price:180, kind:"police", color:"#F4F6FB"},
+    {id:"car-truck", name:"Monster Truck", price:300, kind:"truck", color:"#B05CFF"},
+    {id:"car-rocket", name:"Rocket", price:500, kind:"rocket", color:"#C9D1E0"},
+    {id:"car-gold", name:"Golden Racer", price:1000, kind:"f1", color:"#FFD23F"}]},
+  track: {title:"Tracks", items:[
+    {id:"night", name:"Night Track", price:0, v:["#171B26","#222838","#2B3246","#353D54"]},
+    {id:"sunset", name:"Sunset Road", price:150, v:["#2A1626","#3A2033","#4A2A42","#5A3550"]},
+    {id:"ocean", name:"Ocean Drive", price:150, v:["#0B1D2C","#12304A","#1A3C5C","#24496E"]},
+    {id:"jungle", name:"Jungle Rally", price:250, v:["#0F1E10","#183019","#214122","#2C5530"]},
+    {id:"space", name:"Space Race", price:400, v:["#0A0720","#16113A","#211A4D","#2E2566"]}]},
+  party: {title:"Confetti", items:[
+    {id:"classic", name:"Party Paper", price:0},
+    {id:"stars", name:"Stars", price:80},
+    {id:"hearts", name:"Hearts", price:80},
+    {id:"coins", name:"Coin Shower", price:150}]},
+  sound: {title:"Win sounds", items:[
+    {id:"beep", name:"Beep Tune", price:0, wave:"square", notes:[523,659,784,1047], step:.11},
+    {id:"fanfare", name:"Fanfare", price:100, wave:"triangle", notes:[392,392,392,523,659,784], step:.12},
+    {id:"horn", name:"Race Horn", price:100, wave:"sawtooth", notes:[330,330,494], step:.2},
+    {id:"arcade", name:"Arcade Win", price:150, wave:"square", notes:[880,1175,1568,2093,1568,2093], step:.07}]},
+};
+// bigger activities cost more coins
+const FUN = [
+  {icon:"🎬", name:"Movie night", price:300, desc:"Blanket fort, popcorn, lights off, and watch Paddington 2"},
+  {icon:"🍕", name:"Pizza contest", price:350, desc:"Everyone makes their own pizza, then vote for the best one"},
+  {icon:"🔦", name:"Flashlight hunt", price:200, desc:"Hide 10 things in the dark and find them with flashlights"},
+  {icon:"🏕️", name:"Indoor camping", price:400, desc:"Sleep in sleeping bags on the living room floor and tell stories"},
+  {icon:"🎲", name:"Game tournament", price:250, desc:"Uno, Yatzy and charades, with a tinfoil trophy for the winner"},
+  {icon:"🍂", name:"Autumn walk + soup", price:250, desc:"Find the coolest leaf, then go home for tomato soup"},
+  {icon:"🎤", name:"Talent show", price:200, desc:"30 minutes to practice, then perform for everyone"},
+  {icon:"🧁", name:"Bake-off", price:300, desc:"Everyone decorates their own cupcake"},
+  {icon:"🗺️", name:"Treasure hunt", price:250, desc:"5 clue notes around the house that lead to a prize"},
+  {icon:"📸", name:"Photo challenge", price:150, desc:"Find something red, round, funny, tiny and old"},
+  {icon:"🎨", name:"Portrait night", price:150, desc:"Draw each other in 5 minutes and hang the drawings on the fridge"},
+  {icon:"🍫", name:"Blind taste test", price:150, desc:"Blindfolded, guess the food"},
+  {icon:"🏰", name:"Cardboard city", price:300, desc:"Build houses and a castle from old boxes"},
+  {icon:"🌟", name:"Star night", price:250, desc:"Blankets, cocoa, and look for shooting stars"},
+  {icon:"🕵️", name:"Mystery dinner", price:250, desc:"Someone “steals” a spoon and the others find out who did it"},
+  {icon:"🎵", name:"Music bingo", price:200, desc:"Bingo cards with songs, and 5 in a row wins"},
+  {icon:"🐦", name:"Bird feeder", price:150, desc:"A toilet roll with peanut butter and seeds, hung outside"},
+  {icon:"🔥", name:"Bonfire evening", price:400, desc:"Snobrød and marshmallows over a fire"},
+  {icon:"📖", name:"Story chain", price:100, desc:"Each person adds one sentence to a story and you see how crazy it gets"},
+  {icon:"👍", name:"Yes Day Light", price:1500, desc:"A whole day where the grown-ups say YES to everything, except things that are not reasonable or cost a lot", big:true},
+  {icon:"🐾", name:"Pet of your choice", price:100000, desc:"Pick a pet and it becomes yours! Talk with a grown-up about how to take care of it", big:true},
+];
+const shop = Object.assign({owned:[], car:"car-orange", track:"night", party:"classic", sound:"beep", prizes:[], bought:[]}, saved?.shop || {});
+function itemById(cat, id){ return SHOP[cat].items.find(i=>i.id===id); }
+function owns(it){ return it.price===0 || shop.owned.includes(it.id); }
+function applyTrack(){
+  const t = itemById("track", shop.track) || SHOP.track.items[0], r = document.documentElement.style;
+  ["--asphalt","--lane","--lane-hi","--line"].forEach((p,i)=>r.setProperty(p, t.v[i]));
+}
+function toast(msg){ const t = $("#shopMsg"); t.textContent = msg; }
+function buy(cat, it){
+  if (!owns(it)){
+    if (score < it.price) return toast(`You need ${it.price - score} more coins for ${it.name}.`);
+    addPoints(-it.price); shop.owned.push(it.id);
+    toast(`You bought ${it.name}!`);
+  } else toast(`Now using ${it.name}.`);
+  shop[cat] = it.id;
+  if (cat==="track") applyTrack();
+  if (cat==="sound") cheerSound(it.id);
+  save(); renderShop(); render();
+}
+function preview(cat, it){
+  const p = el("div","preview");
+  if (cat==="car") p.innerHTML = carSvg(it, 72);
+  else if (cat==="track"){ p.style.background = `linear-gradient(135deg, ${it.v[0]} 0 40%, ${it.v[1]} 40% 70%, ${it.v[3]} 70%)`; p.innerHTML = carSvg(null, 44); }
+  else if (cat==="party"){ p.append(el("span","bigicon", {classic:"✦ ▪ ●", stars:"★ ★ ★", hearts:"♥ ♥ ♥", coins:"◉ ◉ ◉"}[it.id])); p.classList.add("p-"+it.id); }
+  else { const b = el("button","small ghost","▶ Listen"); b.onclick = () => cheerSound(it.id); p.append(b); }
+  return p;
+}
+function renderShop(){
+  const box = $("#shopItems"); box.textContent = "";
+  for (const cat of Object.keys(SHOP)){
+    const sec = el("section","shopsec"); sec.append(el("h3",null,SHOP[cat].title));
+    const grid = el("div","shopgrid");
+    for (const it of SHOP[cat].items){
+      const using = shop[cat]===it.id, have = owns(it);
+      const card = el("div","item"+(using?" using":""));
+      card.append(preview(cat,it), el("div","iname",it.name));
+      const b = el("button","small"+(have?" ghost":""));
+      if (using){ b.textContent = "Using"; b.disabled = true; }
+      else if (have) b.textContent = "Use";
+      else { b.innerHTML = COIN + " " + it.price; if (score < it.price) b.classList.add("broke"); }
+      b.onclick = () => buy(cat, it);
+      card.append(b); grid.append(card);
+    }
+    sec.append(grid); box.append(sec);
+  }
+  // family fun: buy as many times as you like
+  const fun = el("section","shopsec");
+  fun.append(el("h3",null,"Family fun"), el("p","howpts","Buy a fun thing to do together. Show it to a grown-up to plan it!"));
+  const fg = el("div","shopgrid fungrid");
+  for (const f of FUN){
+    const card = el("div","item fun"+(f.big?" big":""));
+    if (f.big) card.append(el("span","tag","Super prize"));
+    const pv = el("div","preview"); pv.append(el("span","funicon",f.icon));
+    card.append(pv, el("div","iname",f.name), el("p","fundesc",f.desc));
+    const b = el("button","small"); b.innerHTML = COIN + " " + f.price.toLocaleString("en-US"); if (score < f.price) b.classList.add("broke");
+    b.onclick = () => {
+      if (score < f.price) return toast(`You need ${f.price - score} more coins for ${f.name}.`);
+      addPoints(-f.price); shop.bought.unshift({name:f.name, when:Date.now()}); shop.bought = shop.bought.slice(0,30); save(); renderShop();
+      celebrate("FUN UNLOCKED!", `${f.name}: ${f.desc}`, "Show this to a grown-up!");
+    };
+    card.append(b); fg.append(card);
+  }
+  fun.append(fg); box.append(fun);
+
+  // real prizes the kid (or a grown-up) adds
+  const pl = $("#prizeList"); pl.textContent = "";
+  if (!shop.prizes.length) pl.append(el("p","memory","No prizes yet. Add one below, like \"30 min of games\" for 200 coins."));
+  for (const p of shop.prizes){
+    const r = el("div","prize");
+    r.append(el("span","iname",p.name));
+    const b = el("button","small"); b.innerHTML = COIN + " " + p.price; if (score < p.price) b.classList.add("broke");
+    b.onclick = () => {
+      if (score < p.price) return toast(`You need ${p.price - score} more coins for ${p.name}.`);
+      addPoints(-p.price); shop.bought.unshift({name:p.name, when:Date.now()}); shop.bought = shop.bought.slice(0,30); save(); renderShop();
+      celebrate("PRIZE!", `You got: ${p.name}`, "Show this to a grown-up!");
+    };
+    const x = el("button","small ghost","✕"); x.setAttribute("aria-label","Remove "+p.name);
+    x.onclick = () => { shop.prizes = shop.prizes.filter(q=>q!==p); save(); renderShop(); };
+    r.append(b, x); pl.append(r);
+  }
+  const bl = $("#boughtList"); bl.textContent = "";
+  bl.hidden = !shop.bought.length;
+  if (shop.bought.length){
+    bl.append(el("h3",null,"Prizes I got"));
+    shop.bought.slice(0,10).forEach(b=>bl.append(el("p",null, `${b.name} · ${new Date(b.when).toLocaleDateString()}`)));
+  }
+}
+$("#prizeForm").onsubmit = e => {
+  e.preventDefault();
+  const n = $("#prizeName").value.trim(), pr = Math.round(Number($("#prizePrice").value));
+  if (!n || !(pr > 0)) return toast("Type a prize and how many coins it costs.");
+  shop.prizes.push({name:n.slice(0,60), price:Math.min(pr, 100000)});
+  $("#prizeName").value = ""; $("#prizePrice").value = "";
+  save(); renderShop(); toast(`Added ${n} to the shop.`);
+};
+function showView(v){
+  $("#raceView").hidden = v!=="race"; $("#shopView").hidden = v!=="shop";
+  $("#navRace").classList.toggle("on", v==="race"); $("#navShop").classList.toggle("on", v==="shop");
+  if (v==="shop"){ toast(""); renderShop(); }
+}
+$("#navRace").onclick = () => showView("race");
+$("#navShop").onclick = () => showView("shop");
+applyTrack();
+
+function finishTimer(c){
+  const secs = (Date.now()-c.start)/1000;
+  const guess = c.minutes;
+  // a tap that is only a few seconds long is a mistake or a test, not a real time: don't learn "1 min" from it
+  if (secs < 30){
+    c.start = null; c.done = true;
+    const got = award(c, chorePoints(c, guess));
+    c.why = got ? `That was only a few seconds, so I didn't save it as your time. You still got ${got} coins!`
+          : "You already got coins for this example chore. Snap your real chore list to earn more!";
+    save(); render(); maybeWon(); return;
+  }
+  const real = Math.max(1, Math.round(secs/60));
+  c.start = null; c.done = true; c.prev = guess; c.minutes = real;
+  const k = key(c.name);
+  const oldBest = learned[k]?.length ? Math.min(...learned[k]) : null;
+  const fast = real < guess, record = !!(oldBest && real < oldBest);
+  const got = award(c, chorePoints(c, guess) + (fast ? 40 : 0) + (record ? 60 : 0));
+  if (fast || record){
+    celebrate(record ? "NEW RECORD!" : "GOOD JOB!",
+      `You finished "${c.name}" super fast!` + (fast ? ` ${guess-real} min faster than my guess!` : " Your best ever!"),
+      got ? `+${got} coins` : "");
+  }
+  (learned[k] ||= []).push(real);
+  if (learned[k].length > 20) learned[k].shift();
+  const a = avg(k), n = learned[k].length;
+  c.why = (real < guess ? `Wow, ${real} min! Faster than my guess.`
+        : real > guess ? `That took ${real} min.`
+        : `${real} min, right on my guess!`)
+        + (n > 1 ? ` Your average is now ${a} min (${n} times).` : ` I'll remember it.`);
+  save(); render(); maybeWon();
+}
+
+setInterval(() => {
+  document.querySelectorAll(".timer").forEach(t => t.textContent = fmt(Math.floor((Date.now()-Number(t.dataset.start))/1000)));
+  document.querySelectorAll(".bar[data-start]").forEach(b => {
+    const p = runPct(Number(b.dataset.start), Number(b.dataset.goal));
+    b.querySelector("i").style.width = p+"%"; b.querySelector(".car").style.left = p+"%";
+  });
+}, 1000);
+
+function memoryText(){
+  const e = Object.keys(learned).filter(k=>learned[k].length).slice(-30);
+  return e.length ? "\nThis kid's AVERAGE real times from before (use these when a chore matches): " + e.map(k=>`${k} = ${avg(k)} min (${learned[k].length} times)`).join("; ") + "\n" : "";
+}
+
+const PROMPT_RULES = `Read ALL the text you can see, even messy handwriting, crossed-out words, sticky notes, small print and text in the margins. Nothing should be skipped.
+Turn each chore into: a short name, a guess of how many minutes a kid (about 8-12 years old) needs, "note" (any extra words written next to that chore, like "before dinner", "only the top shelf", "for Mom", a day or a time; else null), and "ask".
+Also give each chore "area": the area or room the list puts it in (from a heading like "KITCHEN:", a column, a box, or words like "in the garage"), written short like "Kitchen", "Bathroom", "Outside". Use the SAME spelling for chores in the same area. If the list does not say an area for that chore, "area" is null - do not make one up.
+Any text that is NOT a chore and NOT an area heading (a title, a date, a reward, a message) goes in "otherText" as a list of exactly what it says.
+"ask" is null, OR - only if seeing something would really change the time (how full a dishwasher is, how messy a room is, how big a pile of laundry is) - a short, friendly request for one photo, in very simple words, like "Show me a pic of your dishwasher open". Never ask for photos of people.
+Also give each chore "difficulty": "easy", "medium" or "hard" - how hard, tiring or yucky it is for a kid (feeding a pet = easy, emptying the dishwasher = medium, cleaning the bathroom or raking the whole garden = hard). This is about effort, not time.
+Reply with only JSON like: {"chores":[{"name":"Empty the dishwasher","minutes":10,"difficulty":"medium","note":"before dinner","area":"Kitchen","ask":"Show me a pic of your dishwasher open"},{"name":"Feed the cat","minutes":2,"difficulty":"easy","note":null,"area":null,"ask":null}],"otherText":["Saturday chores","Prize: pizza night!"]}`;
+
+// "Kitchen:" starts an area; "empty dishwasher 10 hard" = 10 minutes, hard. No number = 5 min, no word = medium.
+function parseTyped(text){
+  let area = null; const out = [];
+  for (let line of text.split(/\n/).slice(0,60)){
+    line = line.replace(/^\s*([-*•]|\d+[.)])\s*/, "").trim();
+    if (!line) continue;
+    if (/:\s*$/.test(line)){ area = line.replace(/:\s*$/,"").trim().slice(0,30); continue; }
+    const m = line.match(/(\d+)\s*(min(ute)?s?|m)?\b/i);
+    const d = (line.match(/\b(easy|medium|hard)\b/i)||[])[1];
+    const name = line.replace(/(\d+)\s*(min(ute)?s?|m)?\b/i,"").replace(/\b(easy|medium|hard)\b/i,"").replace(/[()\-–,]+\s*$/,"").replace(/\s+/g," ").trim();
+    if (name) out.push({name, minutes: m ? Number(m[1]) : 5, difficulty: d || "medium", area});
+  }
+  return out;
+}
+
+async function readList(file, text){
+  if (busy) return;
+  if (!sample){
+    // no Claude here (like on GitHub): read the typed list ourselves
+    if (!text){ say("Photos only work on the claude.ai link. Type your chores instead.", true); return; }
+    const chores = parseTyped(text);
+    if (!chores.length){ say("Type some chores first.", true); return; }
+    for (const k in photos) delete photos[k];
+    lastOrder = []; wonShown = false;
+    state = {example:false, chores: chores.map(mk), other:[]};
+    save(); render(); say("Done! Fastest chore is at the top.");
+    $("#results").scrollIntoView({behavior:"smooth"});
+    return;
+  }
+  busy = true; say("Reading your list… (this can take a little while)");
+  try{
+    const prompt = (file
+      ? "This photo shows a kid's chore list (it may be handwritten or messy). Read every chore on it.\n"
+      : "Here is a kid's chore list, one per line:\n" + text.slice(0,4000) + "\n\n") + memoryText() + PROMPT_RULES;
+    const out = await sample.json(prompt, file ? {images:[file]} : {});
+    const arr = Array.isArray(out?.chores) ? out.chores : [];
+    if (!arr.length){ say("I couldn't find any chores. Try a clearer photo.", true); return; }
+    for (const k in photos) delete photos[k];
+    lastOrder = [];
+    const other = Array.isArray(out?.otherText) ? out.otherText.map(t=>String(t).slice(0,200)).filter(Boolean).slice(0,20) : [];
+    state = {example:false, chores: arr.slice(0,40).map(mk), other}; wonShown = false;
+    save(); render(); say("Done! Fastest chore is at the top.");
+    $("#results").scrollIntoView({behavior:"smooth"});
+  }catch(e){ say(copyFor(e.code), true); }
+  finally{ busy = false; }
+}
+
+// The kid answered a question (photo or words). Claude updates its guess and may ask one more thing.
+async function answer(c, file, words){
+  if (!sample || talking[c.id]) return;
+  if (file){ photos[c.id] && URL.revokeObjectURL(photos[c.id]); photos[c.id] = URL.createObjectURL(file); }
+  talking[c.id] = true; typing[c.id] = false; render();
+  const asked = c.ask, round = (c.round||0) + 1;
+  try{
+    const out = await sample.json(
+`A kid has the chore "${c.name}". My current guess is ${c.minutes} minutes. I asked them: "${asked}".
+${file ? "The photo is what they sent." : `They answered in words: "${words.slice(0,300)}"`}
+${memoryText()}
+Look carefully and update your guess of how many minutes a kid (about 8-12) needs. Also give the chore a clearer name if you learned something (like "Empty the dishwasher (half full)"), otherwise keep the name.
+If the photo doesn't show the right thing, keep the guess and say so in "why".
+${round < 3 ? `If ONE more photo or question would really help, put it in "ask" (short, simple words, never photos of people). Otherwise "ask" is null.` : `"ask" must be null.`}
+Also say how hard it is for a kid now: "difficulty" is "easy", "medium" or "hard" (effort, not time). It is "${normDiff(c.diff)}" right now.
+Reply with only JSON: {"name": string, "minutes": number, "difficulty": "easy"|"medium"|"hard", "why": "one short sentence for a kid, simple words", "ask": string or null}`,
+      file ? {images:[file], cache:false} : {cache:false});
+    const newMin = clampMin(out?.minutes ?? c.minutes);
+    if (newMin !== c.minutes){ if (c.prev==null) c.prev = c.minutes; c.minutes = newMin; }
+    if (out?.name && String(out.name).trim()) c.name = String(out.name).trim().slice(0,80);
+    c.why = String(out?.why || "").slice(0,200);
+    c.ask = round < 3 && out?.ask ? String(out.ask).slice(0,160) : null;
+    c.round = round;
+    if (out?.difficulty) c.diff = normDiff(out.difficulty);
+    save();
+  }catch(e){ c.why = copyFor(e.code); }
+  talking[c.id] = false;
+  render();
+}
+
+$("#listFile").onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const pic = $("#listPic"); pic.src = URL.createObjectURL(f); pic.hidden = false;
+  readList(f); e.target.value = "";
+};
+$("#typeBtn").onclick = () => { $("#typeBox").hidden = !$("#typeBox").hidden; $("#typed").focus(); };
+$("#typedGo").onclick = () => { const t=$("#typed").value.trim(); if (t) readList(null,t); else say("Type some chores first.", true); };
+$("#resetBtn").onclick = () => {
+  for (const k in photos) delete photos[k];
+  lastOrder = []; wonShown = false; state = {example:false, chores:[], other:[]};
+  $("#listPic").hidden = true; $("#typed").value = ""; save(); render(); say("");
+  window.scrollTo({top:0, behavior:"smooth"});
+};
+
+// ---- accounts: a username + a secret code ----
+// On claude.ai the accounts live in the artifact's shared database, so you can log in on any device.
+// Anywhere else (GitHub, the tablet app) they live in this device's storage.
+let who = null, me = null;
+const Accounts = {
+  db: null, timer: null, pending: null,
+  localAll(){ try{ return JSON.parse(localStorage.getItem("choreRacer.accounts")) || {}; }catch(e){ return {}; } },
+  localPut(u, acc){ try{ const all = this.localAll(); all[u] = acc; localStorage.setItem("choreRacer.accounts", JSON.stringify(all)); }catch(e){} },
+  async get(u){
+    if (this.db){ try{ const s = await this.db.doc("accounts/"+u).get(); if (s.exists) return s.data(); }catch(e){} }
+    return this.localAll()[u] || null;
+  },
+  async put(u, acc){
+    this.localPut(u, acc);                       // always keep a copy on this device
+    if (this.db){ try{ await this.db.doc("accounts/"+u).set(acc); }catch(e){ console.warn("cloud save failed", e?.code); } }
+  },
+  saveData(d){
+    if (!me) return;
+    me.data = JSON.stringify(d); me.updated = Date.now();
+    this.localPut(who, me);
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => this.flush(), 900);   // batch quick taps into one cloud write
+  },
+  flush(){ clearTimeout(this.timer); if (me && this.db) this.db.doc("accounts/"+who).set(me).catch(()=>{}); }
+};
+addEventListener("pagehide", () => Accounts.flush());
+
+const userKey = u => String(u||"").trim().toLowerCase();
+async function hashCode(salt, code){
+  if (!crypto.subtle){   // only missing on non-https pages: use a simple scramble instead
+    let h1 = 0x811c9dc5, h2 = 0x1234567, s = salt + ":" + code;
+    for (let r = 0; r < 500; r++) for (let i = 0; i < s.length; i++){ const c = s.charCodeAt(i); h1 = Math.imul(h1 ^ c, 16777619) >>> 0; h2 = Math.imul(h2 + c + r, 2246822519) >>> 0; }
+    return "x" + h1.toString(16) + h2.toString(16);
+  }
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(salt + ":" + code));
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+function loginMsg(t, bad){ const m = $("#loginMsg"); m.textContent = t || ""; m.classList.toggle("bad", !!bad); }
+
+function applyData(d){
+  saved = d || null;
+  learned = saved?.learned || {};
+  for (const k in learned) if (!Array.isArray(learned[k])) learned[k] = [Number(learned[k])].filter(n=>n>0);
+  if (saved && !saved.cleaned1){ for (const k in learned){ learned[k] = learned[k].filter(n=>n>1); if (!learned[k].length) delete learned[k]; } }
+  state = saved?.chores ? {example:false, chores:saved.chores, other:saved.other, won:saved.won, tab:saved.tab}
+                        : {example:false, chores:EXAMPLE.map(mk), other:[]};   // a new player starts with a small real list
+  score = Number(saved?.score) || 0;
+  exampleEarned = new Set(saved?.exampleEarned || []);
+  for (const k of Object.keys(shop)) delete shop[k];
+  Object.assign(shop, {owned:[], car:"car-orange", track:"night", party:"classic", sound:"beep", prizes:[], bought:[]}, saved?.shop || {});
+  wonShown = false; lastOrder = []; clearAsk = false;
+  $("#score").textContent = score; $("#who").textContent = me?.name || "";
+  applyTrack(); showView("race"); render();
+}
+
+async function enter(u, acc){
+  who = u; me = acc;
+  try{ localStorage.setItem("choreRacer.who", u); }catch(e){}
+  let d = null; try{ d = JSON.parse(acc.data || "null"); }catch(e){}
+  applyData(d);
+  $("#login").hidden = true;
+}
+
+$("#loginForm").onsubmit = async e => {
+  e.preventDefault();
+  const name = $("#loginUser").value.trim(), u = userKey(name), code = $("#loginCode").value;
+  if (!u || !code) return loginMsg("Type your username and your code.", true);
+  loginMsg("Checking…");
+  const acc = await Accounts.get(u);
+  if (!acc) return loginMsg(`There's no player called "${name}" yet. Tap "Make new account".`, true);
+  if (await hashCode(acc.salt, code) !== acc.hash) return loginMsg("That code is wrong. Try again.", true);
+  loginMsg(""); $("#loginCode").value = "";
+  enter(u, acc);
+};
+$("#newAcct").onclick = async () => {
+  const name = $("#loginUser").value.trim(), u = userKey(name), code = $("#loginCode").value;
+  if (!/^[a-z0-9_]{3,20}$/.test(u)) return loginMsg("Pick a username with 3 to 20 letters or numbers (no spaces).", true);
+  if (code.length < 4) return loginMsg("Your code needs at least 4 letters or numbers.", true);
+  loginMsg("Making your account…");
+  if (await Accounts.get(u)) return loginMsg(`"${name}" is taken. Try another username.`, true);
+  const salt = [...crypto.getRandomValues(new Uint8Array(12))].map(b=>b.toString(16).padStart(2,"0")).join("");
+  // the first account on this device gets the coins and times saved before accounts existed
+  let data = null, moved = false;
+  try{ if (!localStorage.getItem("choreRacer.moved")){ data = legacyLoad(); if (data){ localStorage.setItem("choreRacer.moved","1"); moved = true; } } }catch(e){}
+  const acc = {name: name.slice(0,20), salt, hash: await hashCode(salt, code), data: JSON.stringify(data), created: Date.now(), updated: Date.now()};
+  await Accounts.put(u, acc);
+  loginMsg(""); $("#loginCode").value = "";
+  await enter(u, acc);
+  if (moved) say(`Welcome ${acc.name}! I moved your old coins into your new account.`);
+  else say(`Welcome ${acc.name}! Snap or type your chore list to start.`);
+};
+$("#logoutBtn").onclick = () => {
+  Accounts.flush(); who = null; me = null;
+  try{ localStorage.removeItem("choreRacer.who"); }catch(e){}
+  $("#loginUser").value = ""; loginMsg(""); $("#login").hidden = false; $("#loginUser").focus();
+};
+
+render();
+(async () => {
+  // which helpers does this place have? (claude.ai has Claude + a shared database; GitHub/app has neither)
+  const hasClaude = !!window.claude;
+  if (hasClaude){
+    try{ sample = await claude.use("sample"); if (sample){ const lim = await sample.limits().catch(()=>null); photoOK = !!lim?.images; } }catch(e){ sample = null; }
+    try{ Accounts.db = await claude.use("db"); }catch(e){ Accounts.db = null; }
+  }
+  $("#loginWhere").textContent = Accounts.db
+    ? "Your account works on any device that opens this link."
+    : "Your account is saved on this device.";
+  $("#loginBusy").hidden = true; $("#loginForm").hidden = false;
+  if (!sample){
+    $("label[for=listFile]").hidden = true; $("#typeBox").hidden = false;
+    $("#typeHint").hidden = false;
+  } else if (!photoOK){ $("label[for=listFile]").hidden = true; $("#typeBox").hidden = false; }
+  // stay logged in on this device
+  let last = null; try{ last = localStorage.getItem("choreRacer.who"); }catch(e){}
+  if (last){ const acc = await Accounts.get(last); if (acc) return enter(last, acc); }
+  $("#loginUser").focus();
+})();
+</script>
+
+<script>
+if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{}));
+</script>
+</body>
+</html>
